@@ -1,1 +1,1 @@
-# Projects
+For small projects
