@@ -1,1 +1,1 @@
-For small projects
+For small projects and testing scripts.
