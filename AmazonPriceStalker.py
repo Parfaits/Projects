@@ -3,7 +3,7 @@ import smtplib
 import time
 from bs4 import BeautifulSoup
 
-URL = 'https://www.amazon.ca/Samsung-Internal-MZ-76E1T0B-AM-Version/dp/B078DPCY3T/ref=sr_1_9?crid=2PE679QWSOLWA&keywords=ssd+1tb&qid=1565223304&s=gateway&sprefix=ss%2Caps%2C222&sr=8-9'
+URL = 'https://www.amazon.ca/AmazonBasics-Microfiber-Cleaning-Cloth-24-Pack/dp/B009FUF6DM/ref=pd_ybh_a_4?_encoding=UTF8&psc=1&refRID=9HG1P3PEV20HZJY5FJ81'
 emails = ["", ""]
 priceThresh = 9000.0
 
@@ -12,7 +12,7 @@ def log(msg):
 	serverLog = f"[{timestamp}] {msg}"
 	print(serverLog)
 
-def notify(product, unit, value):
+def notify(product, price, ex):
 	connection = smtplib.SMTP("smtp.gmail.com", 587)
 	connection.ehlo()
 	connection.starttls()
@@ -20,15 +20,33 @@ def notify(product, unit, value):
 
 	rcpt = ', '.join(emails)
 	log(rcpt)
-	subject = "Price dropped for an amazon product!"
-	body = f"Product: {product}\nNew price: {unit} {value}\n\nLink: {URL}\n"
+	subject = "[TEST] Price dropped for an amazon product!"
+	body = f"Product: {product}\nSpecified threshold: {priceThresh}\nNew price: {price}\n{ex}\n\nLink: {URL}\n"
 	msg = f"From: AmazonPriceStalker <me>\nTo: {rcpt}\nSubject: {subject}\n\n{body}"
 
 	# SMTP.sendmail(from_addr, to_addrs, msg, mail_options=(), rcpt_options=())
+	log(f"Draft:\n{msg}")
 	connection.sendmail('', emails, msg)
 	log("Mail sent, closing connection.")
 
 	connection.quit()
+
+def extraInfo(html):
+	info = []
+	i = 0
+	options = html.findAll(class_="olp-padding-right")
+	for x in options:
+		info.append(x.get_text())
+		i += 1
+	info = ', '.join(info)
+	info = info.replace(u'\xa0', u' ')
+
+	info += "\nAvailability: "
+	availability = html.find(id="availability").get_text().strip()
+	info += availability.replace(u'\xa0', u' ')
+
+	log(f"Got extra info:\n{info}")
+	return info
 
 def checkPrice():
 	headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36", "Cache-Control": "no-cache", "Pragma": "no-cache"}
@@ -39,23 +57,38 @@ def checkPrice():
 	data = BeautifulSoup(htmlFile.content, 'html.parser')
 	productTitle = data.find(id="productTitle").get_text().strip()
 	price = data.find(id="priceblock_ourprice").get_text()
+	shippingDetails = data.find(id="price-shipping-message").get_text()
+	ex = extraInfo(data)
+
 	priceBuf = price.split()
 	unit = priceBuf[0]
 	value = float(priceBuf[1].replace(',', ''))
+	price = price.replace(u'\xa0', u' ')
+	shippingDetails = shippingDetails.replace("Details", '')
+	shippingDetails = shippingDetails.replace(u'\xa0', u' ')
+	price += f" {shippingDetails}"
 	date = time.ctime()
+
+	log(f"Product: {productTitle}\n\n")
+	log(f"Price: {price}")
+	log(f"Shipping Details: {shippingDetails}")
+	log(f"As of {date}")
+
 	if value < priceThresh:
 		log(f"At {date}, the price fell below {priceThresh}")
 		log(f"Price now is {price}\n")
 		log("Notifying users...")
-		notify(productTitle, unit, value)
-
-	log(f"Product: {productTitle}\n\n")
-	log(f"Price: {price}")
-	log(f"As of {date}")
+		notify(productTitle, price, ex)
+	else:
+		log(f"Price did not fall below {priceThresh}.")
+	log("Done.")
 
 def main():
 	log("Running...\n\n")
-	checkPrice()
+	while True:
+		checkPrice()
+		time.sleep((60*60)*24)
+		log("Rechecking...\n\n")
 
 if __name__ == '__main__':
 	main()
