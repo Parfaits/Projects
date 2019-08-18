@@ -1,6 +1,7 @@
 import requests
 import smtplib
 import time
+from sys import exit
 from bs4 import BeautifulSoup
 
 URL = 'https://www.amazon.ca/AmazonBasics-Microfiber-Cleaning-Cloth-24-Pack/dp/B009FUF6DM/ref=pd_ybh_a_4?_encoding=UTF8&psc=1&refRID=9HG1P3PEV20HZJY5FJ81'
@@ -86,9 +87,13 @@ def checkPrice():
 def main():
 	log("Running...\n\n")
 	while True:
-		checkPrice()
-		time.sleep((60*60)*24)
-		log("Rechecking...\n\n")
+		try:
+			checkPrice()
+			time.sleep((60*60*60)*24)
+			log("Rechecking...\n\n")
+		except KeyboardInterrupt:
+			log("Shutdown.")
+			exit()
 
 if __name__ == '__main__':
 	main()
