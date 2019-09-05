@@ -16,16 +16,18 @@ class APS_db():
 		self.date = date
 
 	def _stdev(self, avg):
-		# Sample standard deviation of the price over time.
-		self._cur.execute(f"SELECT {self.price} FROM '{self.email}';")
+		# Sample standard deviation of the price.
+		self._cur.execute(f"SELECT price FROM '{self.email}';")
 		p = self._cur.fetchall()
 		priceList = []
 		for x in p:
 			priceList.append(x[0])
+			# print(f"[DB] x={x[0]}")
 		n = len(priceList)
 		var = []
 		for i in range(n):
 			var.append((priceList[i] - avg)**2)
+			# print(f"[DB] var[{i}]={var[i]}, priceList[{i}]={priceList[i]}")
 		var = sum(var)
 		sd = math.sqrt(var/(n-1))
 		return sd
@@ -61,6 +63,7 @@ class APS_db():
 		print(f"[DB] Statistics for client {self.email}:")
 		print("#Entries\tminPrice\tmaxPrice\tAverage\tStdev")
 		print(f"{stats[0]}\t\t{stats[1]}\t\t{stats[2]}\t\t{stats[3]}\t{stats[4]}")
+		print('\n')
 		return stats
 
 	def fetch(self, option='*', n=0):
